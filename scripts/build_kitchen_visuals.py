@@ -246,165 +246,12 @@ def build_image_19():
 
 def render_kitchen_dynamic_gif():
     """
-    生成厨房前屈与踩脚凳减压动态仿真 GIF
-    采用宽幅零裁剪画布（900x720），完整展现人物站姿、头部、脚底踩脚凳、脊柱热点与全套遥测数据
+    生成厨房前屈与踩脚凳减压双视窗动态仿真 GIF (全身动作 + L5/S1 横断面受力联动)
     """
-    base_path = os.path.join(BRAIN_DIR, "kitchen_posture_clean_base_1790135744317.jpg")
-    base_img = Image.open(base_path).convert("RGBA")
-
-    target_w, target_h = 900, 720
-    top_hud_h = 60
-    bottom_dash_h = 115
-    center_img_h = target_h - top_hud_h - bottom_dash_h  # 545
-
-    # 等比例缩放底图至高度 540，居中放置
-    scaled_w = int(base_img.width * center_img_h / base_img.height)  # 545 * 1200 / 896 ≈ 729
-    scaled_base = base_img.resize((scaled_w, center_img_h), Image.Resampling.LANCZOS)
-    img_x = (target_w - scaled_w) // 2
-    img_y = top_hud_h
-
-    total_frames = 60
-    frames = []
-
-    for i in range(total_frames):
-        frame = Image.new("RGBA", (target_w, target_h), (8, 12, 18, 255))
-        frame.paste(scaled_base, (img_x, img_y))
-
-        if i <= 12:
-            phase_num = "阶段一/四：中立站姿 (基线状态)"
-            phase_desc = "躯干重心在重力垂线上，背伸肌群呈生理性低张力，L5/S1 承受基础重力"
-            trunk_deg = "0.0° (直立中立)"
-            disc_press = "850 N (基线载荷)"
-            disc_color = (80, 230, 120, 255)
-            muscle_status = "正常供血 (微循环通畅)"
-            muscle_color = (80, 230, 120, 255)
-            prot_depth = "5.6 mm (基线测量)"
-            prot_color = (255, 210, 100, 255)
-            nerve_status = "通畅 (无卡压，硬膜前壁弧形凹陷)"
-            nerve_color = (80, 230, 120, 255)
-            hotspot_alpha = 0
-            is_relieved = False
-        elif i <= 28:
-            p = (i - 12) / 16.0
-            phase_num = "阶段二/四：低台面深躬切配/洗涤"
-            phase_desc = f"躯干前倾 {p*25:.1f}°，力臂拉长至 {15+p*15:.0f}cm，椎间隙前窄后宽楔形变"
-            trunk_deg = f"{p*25:.1f}° (过度前倾)"
-            disc_press = f"{int(850 + 1670*p)} N (超载暴增)"
-            disc_color = (255, 140 - int(60*p), 50, 255)
-            muscle_status = f"负荷激增 ({int(100+180*p)}% MVC)"
-            muscle_color = (255, 160 - int(80*p), 60, 255)
-            d = round(5.6 + 0.8 * p, 1)
-            prot_depth = f"{d} mm (流体髓核向右后方挤出)"
-            prot_color = (255, 90, 80, 255)
-            nerve_status = f"受压加剧 (变形率 {int(15+45*p)}%)"
-            nerve_color = (255, 100, 80, 255)
-            hotspot_alpha = int(190 * p)
-            is_relieved = False
-        elif i <= 42:
-            phase_num = "阶段三/四：持续 30 分钟等长痉挛"
-            phase_desc = "肌内压超标闭塞毛细血管，产生无菌性肌炎；髓核持续顶死右侧 S1"
-            trunk_deg = "25.0° (深躬维持)"
-            disc_press = "2520 N (极限高压)"
-            disc_color = (255, 40, 40, 255)
-            muscle_status = "完全缺血 (毛细血管闭塞强直)"
-            muscle_color = (255, 50, 50, 255)
-            prot_depth = "6.4 mm (峰值占位)"
-            prot_color = (255, 40, 40, 255)
-            nerve_status = "高危绞杀 (微循环阻断，剧烈放电)"
-            nerve_color = (255, 40, 40, 255)
-            hotspot_alpha = 240
-            is_relieved = False
-        else:
-            p = (i - 42) / 17.0
-            phase_num = "阶段四/四：踩脚凳+垫高砧板介入"
-            phase_desc = f"屈髋 25° 松弛髂腰肌，躯干恢复中立微前倾，台面分担 35% 负荷"
-            trunk_deg = f"{25.0 - p*22.0:.1f}° (中立微直立)"
-            disc_press = f"{int(2520 - 1400*p)} N (瞬间大减载)"
-            disc_color = (70, 220, 130, 255)
-            muscle_status = "肌电下降 45% (血流重新灌注)"
-            muscle_color = (70, 220, 130, 255)
-            d = round(6.4 - 0.8 * p, 1)
-            prot_depth = f"{d} mm (髓核回纳平复)"
-            prot_color = (255, 210, 100, 255)
-            nerve_status = "受压解除 (右侧 S1 神经根恢复通畅)"
-            nerve_color = (70, 220, 130, 255)
-            hotspot_alpha = int(240 * (1.0 - p))
-            is_relieved = True
-
-        fx = Image.new("RGBA", (target_w, target_h), (0, 0, 0, 0))
-        fdraw = ImageDraw.Draw(fx)
-
-        # 1. 顶部半透明标题面板 (HUD)
-        fdraw.rounded_rectangle([(15, 8), (target_w - 15, top_hud_h - 4)], radius=6, fill=(10, 16, 26, 230), outline=(0, 180, 240, 180), width=1)
-        fdraw.text((25, 12), "【开放厨房前屈操作与踩脚凳减压 · 微观力学与 S1 神经演变仿真】", font=FONT_CARD_TITLE, fill=(0, 220, 255, 255))
-        fdraw.text((25, 34), f"{phase_num} - {phase_desc}", font=FONT_CARD_SUB, fill=(210, 230, 250, 230))
-
-        # 2. 动态受力与减压特效
-        # 人物映射坐标转换：
-        # 左侧人物 L5/S1 坐标在缩放图中约为 x: img_x + int(scaled_w * 0.285), y: img_y + int(center_img_h * 0.46)
-        left_lx = img_x + int(scaled_w * 0.285)
-        left_ly = img_y + int(center_img_h * 0.46)
-
-        # 右侧人物腰椎中立区与踩脚凳真实坐标
-        right_rx = 685
-        right_ry = 250
-
-        # 踩脚凳区域
-        stool_x = 645
-        stool_y = 530
-
-        if not is_relieved:
-            if hotspot_alpha > 0:
-                glow_r = int(24 + 8 * math.sin(i * 0.4))
-                fdraw.ellipse([(left_lx - glow_r, left_ly - glow_r), (left_lx + glow_r, left_ly + glow_r)], fill=(255, 40, 40, int(hotspot_alpha * 0.4)))
-                fdraw.ellipse([(left_lx - glow_r // 2, left_ly - glow_r // 2), (left_lx + glow_r // 2, left_ly + glow_r // 2)], fill=(255, 220, 50, int(hotspot_alpha * 0.7)))
-                # 警告框
-                fdraw.rectangle([(left_lx - 60, left_ly - 50), (left_lx + 60, left_ly + 60)], outline=(255, 50, 50, hotspot_alpha), width=2)
-                fdraw.text((left_lx - 55, left_ly - 45), f"L5/S1: {disc_press}", font=FONT_SMALL, fill=(255, 220, 220, 255))
-        else:
-            calm_r = int(22 + 6 * math.sin(i * 0.3))
-            fdraw.ellipse([(right_rx - calm_r, right_ry - calm_r), (right_rx + calm_r, right_ry + calm_r)], fill=(40, 220, 120, 90))
-            # 腰椎绿色方框
-            fdraw.rectangle([(right_rx - 45, right_ry - 45), (right_rx + 45, right_ry + 55)], outline=(60, 230, 130, 200), width=2)
-            fdraw.text((right_rx - 40, right_ry - 40), f"中立减载: {disc_press}", font=FONT_SMALL, fill=(180, 255, 200, 255))
-            # 踩脚凳绿色高亮框
-            fdraw.rectangle([(stool_x - 35, stool_y - 25), (stool_x + 35, stool_y + 15)], outline=(60, 230, 130, 220), width=2)
-            fdraw.text((stool_x - 30, stool_y - 20), "12cm 踏板", font=FONT_SMALL, fill=(160, 255, 190, 255))
-
-        # 3. 底部实时遥测数据卡片 (HUD Dashboard)
-        dy = target_h - bottom_dash_h - 4
-        fdraw.rounded_rectangle([(15, dy), (target_w - 15, dy + bottom_dash_h)], radius=6, fill=(10, 15, 24, 240), outline=(0, 200, 255, 180), width=1)
-        fdraw.text((25, dy + 8), "【脊柱生物力学与 S1 神经根实时遥测 (Telemetry Dashboard)】", font=FONT_CARD_TITLE, fill=(0, 210, 255, 255))
-        fdraw.line([(25, dy + 28), (target_w - 25, dy + 28)], fill=(0, 180, 240, 60), width=1)
-
-        cols = [
-            ("躯干前倾角", trunk_deg, (255, 220, 100, 255)),
-            ("L5/S1 轴向压力", disc_press, disc_color),
-            ("竖脊肌微循环", muscle_status, muscle_color),
-            ("突出团块外突", prot_depth, prot_color),
-            ("右侧 S1 神经状态", nerve_status, nerve_color)
-        ]
-        
-        cw = (target_w - 50) // 5
-        for col_idx, (c_label, c_val, c_color) in enumerate(cols):
-            cx = 25 + col_idx * cw
-            fdraw.text((cx, dy + 36), c_label, font=FONT_SMALL, fill=(180, 200, 220, 240))
-            fdraw.text((cx, dy + 56), c_val, font=FONT_SMALL, fill=c_color)
-
-        fdraw.text((25, dy + 88), "★ 核心临床结论：踩脚凳每 10~15 分钟单脚交替 + 砧板垫高 10cm，可瞬间消除 50% 轴向高压与神经机械牵张！", font=FONT_ALERT, fill=(255, 220, 130, 255))
-
-        frame = Image.alpha_composite(frame, fx).convert("RGB")
-        frames.append(frame)
-
-    out_gif = os.path.join(VIDEO_DIR, "axial_kitchen_flexion_dynamic.gif")
-    frames[0].save(
-        out_gif,
-        save_all=True,
-        append_images=frames[1:],
-        duration=100,
-        loop=0
-    )
-    print(f"Rendered dynamic simulation GIF: {out_gif} ({len(frames)} frames)")
+    import sys
+    sys.path.append(os.path.dirname(__file__))
+    from build_coupled_kitchen_gif import build_coupled_dynamic_gif
+    build_coupled_dynamic_gif()
 
 
 if __name__ == "__main__":
@@ -413,3 +260,4 @@ if __name__ == "__main__":
     build_image_19()
     render_kitchen_dynamic_gif()
     print("All kitchen visuals generated successfully!")
+
